@@ -1,7 +1,5 @@
-#include "llvm/Pass.h" 
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/raw_ostream.h"
+#include "hw1.h"
+#include "llvm/IR/LegacyPassManager.h"
 
 using namespace llvm;
 
@@ -26,9 +24,10 @@ namespace {
       return true;
     }
   };
+
+  char Hello::ID = 0;
+
+  //register class 
+  static RegisterPass<Hello> X("hello", "Hello World Pass", false, false);
+  
 }
-
-char Hello::ID = 0;
-
-//register class 
-static RegisterPass<Hello> X("hello", "Hello World Pass");

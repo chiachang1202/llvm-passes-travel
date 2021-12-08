@@ -1,20 +1,27 @@
-LLVM_CONFIG=/usr/local/opt/llvm/bin/llvm-config
+LLVM_CONFIG := /usr/local/opt/llvm/bin/llvm-config
 
-CXX=`$(LLVM_CONFIG) --bindir`/clang
-CPPFLAGS="-I/usr/local/opt/llvm/include"
-LDFLAGS="-L/usr/local/opt/llvm/lib"
+SO := hw1.so
+OBJ := hw1.o
+SRC := hw1.cpp
 
-all: hw1.so test
+CXX := `$(LLVM_CONFIG) --bindir`/clang
+CXXFLAGS := ""
+# C PreProcessor flag
+CPPFLAGS := "-I/usr/local/opt/llvm/include"
+LDFLAGS := "-L/usr/local/opt/llvm/lib"
 
-hw1.so: hw1.o
-	$(CXX) -shared -undefined dynamic_lookup hw1.o $(LDFLAGS) -fPIC -o hw1.so
+.PHONY: all input clean
 
-hw1.o: hw1.cpp
-	$(CXX) -c hw1.cpp $(CPPFLAGS) -o hw1.o
+all: $(SO) input
 
-test: test.c
+$(SO): $(OBJ)
+	$(CXX) -shared -undefined dynamic_lookup $(OBJ) $(LDFLAGS) -fPIC -o $(SO)
+
+$(OBJ): hw1.h $(SRC)
+	$(CXX) -c $(SRC) $(CPPFLAGS) -o $(OBJ)
+
+input: test.c
 	$(CXX) -O0 -Xclang -disable-O0-optnone -S -emit-llvm test.c -o test.ll
 
-.PHONY: clean
 clean:
 	rm -f *.o *.ll *.so
