@@ -3,23 +3,26 @@
 #include <stdio.h>
 
 int foo(int a) {
-    return a + 1;
+  return a * 2;
 }
 
-int bar(int b) {
-    return b + 2;
+int bar(int a, int b) {
+  return (a + foo(b) * 2);
 }
 
-int main() {
+int fez(int a, int b, int c) {
+  return (a + bar(a, b) * 2 + c * 3);
+}
 
-    int c, d, e, f, g;
+int main(int argc, char *argv[]) {
+  int a = 123;
+  int ret = 0;
+  int slack = 0;
 
-    c = foo(1);
-    d = bar(2);
-    e = bar(3);
-    f = foo(4);
-    
-    g = baz(e, f);
+  ret += foo(a);
+  ret += bar(a, ret);
+  ret += fez(a, ret, 123);
+  slack = baz(a, 123);
 
-    return f;
+  return ret;
 }
