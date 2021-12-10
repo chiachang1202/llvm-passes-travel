@@ -1,4 +1,4 @@
-LLVM_CONFIG := /home/chiachang/Advanced-Compiler/llvm_build/bin/llvm-config
+LLVM_CONFIG := /usr/local/opt/llvm/bin/llvm-config
 
 CXX := `$(LLVM_CONFIG) --bindir`/clang
 CXXFLAGS := ""
@@ -18,6 +18,6 @@ test.ll: test.c test.h
 	$(CXX) -O0 -Xclang -disable-O0-optnone -S -emit-llvm -include test.h -c test.c -o test.ll
 
 clean:
-	rm -f *.o *.ll *.so
+	rm -f *.o *.ll *.so *.bin
 
 .PHONY: all

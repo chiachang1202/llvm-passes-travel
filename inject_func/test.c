@@ -17,12 +17,10 @@ int fez(int a, int b, int c) {
 int main(int argc, char *argv[]) {
   int a = 123;
   int ret = 0;
-  int slack = 0;
 
   ret += foo(a);
   ret += bar(a, ret);
   ret += fez(a, ret, 123);
-  slack = baz(a, 123);
 
   return ret;
 }
