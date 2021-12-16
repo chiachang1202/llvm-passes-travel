@@ -5,19 +5,20 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 ; Function Attrs: noinline nounwind ssp uwtable
 define void @icpp3() #0 {
-  %1 = alloca i32, align 4
-  %2 = alloca i32, align 4
-  %3 = alloca i32*, align 8
-  %4 = alloca i32**, align 8
-  store i32* %1, i32** %3, align 8
-  store i32** %3, i32*** %4, align 8
-  %5 = load i32**, i32*** %4, align 8
-  store i32* %2, i32** %5, align 8
-  %6 = load i32*, i32** %3, align 8
-  store i32 3, i32* %6, align 4
-  %7 = load i32**, i32*** %4, align 8
-  %8 = load i32*, i32** %7, align 8
-  store i32 4, i32* %8, align 4
+entry:
+  %x = alloca i32, align 4
+  %y = alloca i32, align 4
+  %p = alloca i32*, align 8
+  %pp = alloca i32**, align 8
+  store i32* %x, i32** %p, align 8
+  store i32** %p, i32*** %pp, align 8
+  %0 = load i32**, i32*** %pp, align 8
+  store i32* %y, i32** %0, align 8
+  %1 = load i32*, i32** %p, align 8
+  store i32 3, i32* %1, align 4
+  %2 = load i32**, i32*** %pp, align 8
+  %3 = load i32*, i32** %2, align 8
+  store i32 4, i32* %3, align 4
   ret void
 }
 
