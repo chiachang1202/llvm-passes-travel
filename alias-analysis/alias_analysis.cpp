@@ -127,6 +127,27 @@ namespace {
               // Step 5: Update TEQUIV_i+1
               // =========================
 
+              if (variable.find(val0) != variable.end() && variable.find(val1) != variable.end()) {
+                std::string lhs_expr = variable[val1];
+                std::string rhs_expr = variable[val0];
+                if (rhs_expr[0] != '*') {
+                  rhs_expr = "&" + rhs_expr;
+                }
+
+                lhs_expr = reduce_variable("*" + lhs_expr);
+                rhs_expr = reduce_variable("*" + rhs_expr);
+                tequ[lhs_expr] = rhs_expr;
+
+              }
+              front.clear();
+              back.clear();
+              for (auto &item : tequ) {
+                front.push_back(item.first);
+                back.push_back(item.second);
+              }
+
+              printT2SET("TEQU", front, back);
+
               // For Debugging, make sure the variable is correctly
               // errs() << variable[val1] << " <- " << variable[val0] << "\n";
 
@@ -169,6 +190,21 @@ namespace {
         }
         errs() << "(" << front[size - 1] << "," << back[size - 1] << ")}\n";
       }
+    }
+
+    std::string reduce_variable(std::string var) {
+      int len = var.length();
+      if (len > 2) {
+        while (var[0] == '*' && var[1] == '&') {
+          if (len > 2) {
+            var = var.substr(2, len - 2);
+          }
+          else {
+            break;
+          }
+        }
+      }
+      return var;
     }
   };
 
