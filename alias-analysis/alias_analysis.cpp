@@ -15,8 +15,8 @@ namespace {
 
     // analysis used data structure
     std::unordered_map<Value*, std::string> variable;
-    std::unordered_map<std::string, std::string> tdef = {};
-    std::unordered_map<std::string, std::string> tequ = {};
+    std::unordered_map<std::string, std::string> tdef;
+    std::unordered_map<std::string, std::string> tequ;
     int nline = 0;
 
     //override an abstract virtual method inherited from FunctionPass. 
@@ -58,7 +58,7 @@ namespace {
               // =========================
               // Print assignment number
               // =========================
-              std::string num_assign = "S" + std::to_string(nline);
+              std::string num_assign = "S" + std::to_string(nline+1);
               errs() << num_assign << "\n";
 
               // =========================
@@ -97,12 +97,38 @@ namespace {
               printTSET("TGEN", gen);
 
               // =========================
-              // Step 2: Compute dependences
+              // Step 3: Compute dependences
               // =========================
 
+              // =========================
+              // Step 4: Update TDEF_i+1
+              // =========================
+              // Given TGEN and TDEF, remove the intersection and get the union
+              // To-Do proper subtree elimination
+              for (auto &item : gen) {
+                if (tdef.find(item) != tdef.end()) {
+                  tdef.erase(item);
+                }
+              }
 
+              for (auto &item : gen) {
+                tdef[item] = num_assign;
+              }
+
+              std::vector<std::string> front;
+              std::vector<std::string> back;
+              for (auto &item : tdef) {
+                front.push_back(item.first);
+                back.push_back(item.second);
+              }
+              printT2SET("TDEF", front, back);
+
+              // =========================
+              // Step 5: Update TEQUIV_i+1
+              // =========================
+
+              // For Debugging, make sure the variable is correctly
               // errs() << variable[val1] << " <- " << variable[val0] << "\n";
-              // errs() << *ptty1 << " <- " << *ptty0 << "\n";
 
               nline++;
             }
@@ -126,6 +152,22 @@ namespace {
           errs() << set[i] << ",";
         }
         errs() << set[size - 1] << "}\n";
+      }
+    }
+    void printT2SET(std::string title, std::vector<std::string> front, std::vector<std::string> back) {
+      int size = front.size();
+      if (size == 0) {
+        errs() << title << ":{}\n";
+      }
+      else if (size == 1) {
+        errs() << title << ":{(" << front[0] << "," << back[0] << ")}\n";
+      }
+      else {
+        errs() << title << ":{";
+        for (int i = 0; i < size - 1; i++) {
+          errs() << "(" << front[i] << "," << back[i] << "),";
+        }
+        errs() << "(" << front[size - 1] << "," << back[size - 1] << ")}\n";
       }
     }
   };
