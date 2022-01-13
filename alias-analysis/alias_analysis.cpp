@@ -35,6 +35,12 @@ namespace {
               }
             }
 
+            if (dyn_cast<BinaryOperator>(Ins)) {
+              Type *ty = Ins->getType();
+              std::string name = Ins->getName().str();
+              variable[dyn_cast<Value>(Ins)] = name;
+            }
+
             if (dyn_cast<LoadInst>(Ins)) {
 
               // errs() << "load" << "\n";
@@ -55,6 +61,28 @@ namespace {
 
               Value *val0 = Ins->getOperand(0);
               Value *val1 = Ins->getOperand(1);
+              std::string LHS, RHS;
+              Type *t_LHS = dyn_cast<PointerType>(val1->getType())->getElementType(), *t_RHS = val0->getType();
+
+              // For Debugging, make sure the variable is correctly
+              if (dyn_cast<ConstantInt>(val0)) {
+                ConstantInt* imme = dyn_cast<ConstantInt>(val0);
+                LHS = variable[val1];
+                RHS = std::to_string(imme->getSExtValue());
+              }
+              else {
+                LHS = variable[val1];
+                if (t_LHS->isPointerTy()) {        
+                  RHS = "&" + variable[val0];
+                }
+                else {
+                  RHS = variable[val0];
+                }
+              }
+
+              // errs() << LHS << " <- " << RHS << "\n";
+              // errs() << LHS << "[" << *t_LHS << "]" << " <- " << RHS << "[" << *t_RHS << "]" "\n";
+
               // =========================
               // Print assignment number
               // =========================
@@ -66,25 +94,23 @@ namespace {
               // =========================
               std::vector<std::string> ref;
               //  RHS assignment, including all the subtrees
-              if (variable.find(val0) != variable.end()) {
-                std::string rhs_var = variable[val0];
-                if (rhs_var[0] == '*') {
-                  while (rhs_var[0] == '*') {
-                    ref.push_back(rhs_var);
-                    rhs_var.erase(0,1);
-                  }
-                  ref.push_back(rhs_var);
-                }
+              if (!t_RHS->isIntegerTy()) {
+                add_subtree(ref, RHS);
               }
               //  LHS assignment, including only proper subtrees
-              if (variable.find(val1) != variable.end()) {
-                std::string lhs_var = variable[val1];
-                if (lhs_var[0] == '*') {
-                  lhs_var.erase(0,1);
-                  ref.push_back(lhs_var);
-                  lhs_var.erase(0,1);
+              add_proper_subtree(ref, LHS);
+              // Include co-alias
+              for (auto &str : ref) {
+                for (auto &pair : tequ) {
+                  if (str.compare(pair.first) == 0) {
+                    ref.push_back(pair.second);
+                  }
+                  if (str.compare(pair.second) == 0) {
+                    ref.push_back(pair.first);
+                  }
                 }
               }
+
               // Print TREF set information
               printTSET("TREF", ref);
 
@@ -92,13 +118,24 @@ namespace {
               // Step 2: Compute TGEN(S)
               // =========================
               std::vector<std::string> gen;
-              gen.push_back(variable[val1]);
+              gen.push_back(LHS);
+              // Include co-alias
+              for (auto &str : gen) {
+                for (auto &pair : tequ) {
+                  if (str.compare(pair.first) == 0) {
+                    gen.push_back(pair.second);
+                  }
+                  if (str.compare(pair.second) == 0) {
+                    gen.push_back(pair.first);
+                  }
+                }
+              }
               // Print TGEN set information
               printTSET("TGEN", gen);
 
-              // =========================
-              // Step 3: Compute dependences
-              // =========================
+              // // =========================
+              // // Step 3: Compute dependences
+              // // =========================
 
               // =========================
               // Step 4: Update TDEF_i+1
@@ -127,18 +164,39 @@ namespace {
               // Step 5: Update TEQUIV_i+1
               // =========================
 
-              if (variable.find(val0) != variable.end() && variable.find(val1) != variable.end()) {
-                std::string lhs_expr = variable[val1];
-                std::string rhs_expr = variable[val0];
-                if (rhs_expr[0] != '*') {
-                  rhs_expr = "&" + rhs_expr;
+              // If the element in TEQUIV is the proper subtree of the TGEN, then remove it. 
+              remove_proper_subtree(tequ, gen);
+
+              if (t_LHS->isPointerTy() && t_RHS->isPointerTy()) {
+
+                std::string reduce_LHS = reduce_variable("*" + LHS);
+                std::string reduce_RHS = reduce_variable("*" + RHS);
+                tequ[reduce_LHS] = reduce_RHS;
+                // transitive closure
+                for (auto &pair1 : tequ) {
+                  std::string lhs = "*" + pair1.first;
+                  std::string rhs = "*" + pair1.second;
+                  for (auto &pair2 : tequ) {
+                    if (pair2.first.compare(pair1.first) != 0) {
+                      // A, B
+                      // C, D
+                      if (lhs.compare(pair2.first) == 0) {
+                        tequ[rhs] = pair2.second;
+                      }
+                      else if (lhs.compare(pair2.second) == 0) {
+                        tequ[rhs] = pair2.first;
+                      }
+                      else if (rhs.compare(pair2.first) == 0) {
+                        tequ[lhs] = pair2.second;
+                      }
+                      else if (rhs.compare(pair2.first) == 0) {
+                        tequ[lhs] = pair2.second;
+                      }
+                    }
+                  }
                 }
-
-                lhs_expr = reduce_variable("*" + lhs_expr);
-                rhs_expr = reduce_variable("*" + rhs_expr);
-                tequ[lhs_expr] = rhs_expr;
-
               }
+
               front.clear();
               back.clear();
               for (auto &item : tequ) {
@@ -146,10 +204,7 @@ namespace {
                 back.push_back(item.second);
               }
 
-              printT2SET("TEQU", front, back);
-
-              // For Debugging, make sure the variable is correctly
-              // errs() << variable[val1] << " <- " << variable[val0] << "\n";
+              printT2SET("TEQUIV", front, back);
 
               nline++;
             }
@@ -157,6 +212,52 @@ namespace {
         }
       }
       return false;
+    }
+
+    void add_subtree(std::vector<std::string>& set, std::string var) {
+      int length = var.length();
+      if (length > 1) {
+        if (var[0] == '*') {
+          while (var[0] == '*') {
+            set.push_back(var);
+            var = var.substr(1,length-1);
+          }
+          set.push_back(var);
+        }
+      }
+      else if (length == 1) {
+        set.push_back(var);
+      }
+    }
+
+    void add_proper_subtree(std::vector<std::string>& set, std::string var) {
+      int length = var.length();
+      if (length > 1) {
+        if (var[0] == '*') {
+          var = var.substr(1,length-1);
+          while (var[0] == '*') {
+            set.push_back(var);
+            var = var.substr(1,length-1);
+          }
+          set.push_back(var);
+        }
+      }
+    }
+
+    void remove_proper_subtree(std::unordered_map<std::string, std::string>& map, std::vector<std::string> set) {
+      // To-Do: modified this function
+      // easy-to-do version, search from TGEN/TREF to eliminate element in TEQUIV
+      for (auto &element : set) {
+        std::string str = "*" + element;
+        for (int i = 0; i < 4; i++) {
+          for (auto &pair : map) {
+            if (str.compare(pair.first) == 0 || str.compare(pair.second) == 0) {
+              map.erase(map.find(pair.first));
+            }
+          }
+          str = "*" + str;
+        }
+      }
     }
 
     void printTSET(std::string title, std::vector<std::string> set) {
@@ -195,13 +296,8 @@ namespace {
     std::string reduce_variable(std::string var) {
       int len = var.length();
       if (len > 2) {
-        while (var[0] == '*' && var[1] == '&') {
-          if (len > 2) {
-            var = var.substr(2, len - 2);
-          }
-          else {
-            break;
-          }
+        if (var[0] == '*' && var[1] == '&') {
+          var = var.substr(2, len - 2);
         }
       }
       return var;
