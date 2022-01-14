@@ -2,6 +2,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <unordered_map>
 
 using namespace llvm;
@@ -94,7 +95,7 @@ namespace {
               // =========================
               std::vector<std::string> ref;
               //  RHS assignment, including all the subtrees
-              if (!t_RHS->isIntegerTy()) {
+              if (!dyn_cast<ConstantInt>(val0)) {
                 add_subtree(ref, RHS);
               }
               //  LHS assignment, including only proper subtrees
@@ -103,10 +104,14 @@ namespace {
               for (auto &str : ref) {
                 for (auto &pair : tequ) {
                   if (str.compare(pair.first) == 0) {
-                    ref.push_back(pair.second);
+                    if (std::find(ref.begin(), ref.end(), pair.second) == ref.end()) {
+                      ref.push_back(pair.second);
+                    }
                   }
                   if (str.compare(pair.second) == 0) {
-                    ref.push_back(pair.first);
+                    if (std::find(ref.begin(), ref.end(), pair.first) == ref.end()) {
+                      ref.push_back(pair.first);
+                    }
                   }
                 }
               }
@@ -123,31 +128,44 @@ namespace {
               for (auto &str : gen) {
                 for (auto &pair : tequ) {
                   if (str.compare(pair.first) == 0) {
-                    gen.push_back(pair.second);
+                    if (std::find(gen.begin(), gen.end(), pair.second) == gen.end()) {
+                      gen.push_back(pair.second);
+                    }
                   }
                   if (str.compare(pair.second) == 0) {
-                    gen.push_back(pair.first);
+                    if (std::find(gen.begin(), gen.end(), pair.first) == gen.end()) {
+                      gen.push_back(pair.first);
+                    }
                   }
                 }
               }
+
               // Print TGEN set information
               printTSET("TGEN", gen);
 
-              // // =========================
-              // // Step 3: Compute dependences
-              // // =========================
+              // =========================
+              // Step 3: Compute dependences
+              // =========================
+
+              errs() << "DEP: {" << "\n";
+              for (auto &var : ref) {
+                if (tdef.find(var) != tdef.end()) {
+                  errs() << var << " :" << tdef[var] << "-------" << num_assign << "\n";
+                }
+              }
+              for (auto &var : gen) {
+                if (tdef.find(var) != tdef.end()) {
+                  errs() << var << " :" << tdef[var] << "---O---" << num_assign << "\n";
+                }
+              }
+              errs() << "}" << "\n";
 
               // =========================
               // Step 4: Update TDEF_i+1
               // =========================
               // Given TGEN and TDEF, remove the intersection and get the union
-              // To-Do proper subtree elimination
-              for (auto &item : gen) {
-                if (tdef.find(item) != tdef.end()) {
-                  tdef.erase(item);
-                }
-              }
-
+              
+              // Direct assign unorder_map key/value pair to update/insert the TDEF
               for (auto &item : gen) {
                 tdef[item] = num_assign;
               }
@@ -214,13 +232,14 @@ namespace {
       return false;
     }
 
+    // To-Do: clarify the definition about "subtree" and "proper subtree"
     void add_subtree(std::vector<std::string>& set, std::string var) {
       int length = var.length();
       if (length > 1) {
         if (var[0] == '*') {
           while (var[0] == '*') {
             set.push_back(var);
-            var = var.substr(1,length-1);
+            var = var.substr(1,var.length()-1);
           }
           set.push_back(var);
         }
@@ -234,11 +253,11 @@ namespace {
       int length = var.length();
       if (length > 1) {
         if (var[0] == '*') {
-          var = var.substr(1,length-1);
-          while (var[0] == '*') {
-            set.push_back(var);
-            var = var.substr(1,length-1);
-          }
+          var = var.substr(1,var.length()-1);
+          // while (var[0] == '*') {
+          //   set.push_back(var);
+          //   var = var.substr(1,var.length()-1);
+          // }
           set.push_back(var);
         }
       }
