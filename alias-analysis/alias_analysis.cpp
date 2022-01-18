@@ -16,6 +16,7 @@ namespace {
 
     // analysis used data structure
     std::unordered_map<Value*, std::string> variable;
+    std::unordered_map<Value*, std::string> allocation;
     std::unordered_map<std::string, std::string> tdef;
     std::unordered_map<std::string, std::string> tequ;
     int nline = 0;
@@ -25,6 +26,9 @@ namespace {
       
       for (Module::iterator F = M.begin(); F != M.end(); F++) {
         for (Function::iterator BB = F->begin(); BB != F->end(); BB++) {
+
+          std::vector<std::string> global_ref;
+
           for (BasicBlock::iterator Ins = BB->begin(); Ins != BB->end(); Ins++) {
             if (dyn_cast<AllocaInst>(Ins)) {
               // errs() << *Ins << "\n";
@@ -33,13 +37,27 @@ namespace {
               if (ty->isPointerTy()) {
                 Type *ptty = dyn_cast<PointerType>(ty)->getElementType();
                 variable[dyn_cast<Value>(Ins)] = name;
+                allocation[dyn_cast<Value>(Ins)] = name;
               }
             }
 
             if (dyn_cast<BinaryOperator>(Ins)) {
-              Type *ty = Ins->getType();
               std::string name = Ins->getName().str();
+
               variable[dyn_cast<Value>(Ins)] = name;
+
+              Value *val0 = Ins->getOperand(0);
+              if (allocation.find(val0) != allocation.end()) {
+                std::string para0 = variable[val0];
+                global_ref.push_back(para0);
+              }
+
+              Value *val1 = Ins->getOperand(1);
+              if (allocation.find(val1) != allocation.end()) {
+                std::string para1 = variable[val1];
+                global_ref.push_back(para1);
+              }
+
             }
 
             if (dyn_cast<LoadInst>(Ins)) {
@@ -53,6 +71,7 @@ namespace {
               }
               if (ty->isIntegerTy()) {
                 variable[val] = variable[val0];
+                allocation[val] = variable[val0];
               }
             }
 
@@ -96,7 +115,12 @@ namespace {
               std::vector<std::string> ref;
               //  RHS assignment, including all the subtrees
               if (!dyn_cast<ConstantInt>(val0)) {
-                add_subtree(ref, RHS);
+                if (allocation.find(val0) != allocation.end()) {
+                  add_subtree(ref, RHS);
+                }
+                else {
+                  ref = global_ref;
+                }
               }
               //  LHS assignment, including only proper subtrees
               add_proper_subtree(ref, LHS);
@@ -224,6 +248,7 @@ namespace {
 
               printT2SET("TEQUIV", front, back);
 
+              global_ref.clear();
               nline++;
             }
           }
