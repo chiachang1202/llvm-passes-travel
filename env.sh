@@ -1,0 +1,1 @@
+export LLVM_ROOT=/usr/local/opt/llvm
