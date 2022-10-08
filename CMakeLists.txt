@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.13.4)
-set(CMAKE_CXX_COMPILER "clang++")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libc++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libc++ -undefined dynamic_lookup")
 
 find_package(LLVM REQUIRED CONFIG)
 # list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")

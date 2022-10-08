@@ -1,1 +1,0 @@
-clang++  -std=c++17 -stdlib=libc++ -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.0.sdk -bundle -Wl,-headerpad_max_install_names -o libLLVMMBA.so CMakeFiles/LLVMMBA.dir/MBA.cpp.o 
