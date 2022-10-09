@@ -1,11 +1,42 @@
 # llvm-passes-travel
 A simple LLVM passes playground which are inspired by NTHU Advanced Compiler (CS5404)
-## Roadmap
-1. Finish README.md Roadmap and References part.
-2. Define the simple data structure.
-3. Build passes via simple Makfile and develop new passes as new feature.
-4. Add-on some backend or LIT or FileCheck feature
-5. Replace build system via **CMake** and **Ninja**
+## User Guide
+### Build the repository
+```sh
+export LLVM_DIR=<preinstalled llvm> # Ex: /usr/local/opt/llvm
+mkdir build && cd build
+cmake .. -DLT_LLVM_INSTALL_DIR=$LLVM_DIR
+make
+```
+### Generate `LLVM IR` from inputs
+```sh
+# Use MBASub example command as tutorial
+clang -emit-llvm -S ../inputs/input_for_mba_sub.c -o input_for_mba_sub.ll
+```
+- `-fno-discard-value-names`: preverse the variable name in the LLVM IR.
+### Run the Analysis/Transformation Pass with `opt`
+```sh
+# The command can only used on legacy pass
+opt -load lib/libMBA.dylib -enable-new-pm=0 -mba -S input_for_mba_sub.ll -o out.ll
+```
+- `-enable-new-pm=0`: Use legacy pass manager with `opt`
+---
+## ChangeLog
+### [1.0.0] - 2022-10-09
+#### Added
+- User Guide section in README.md
+- Question section in README.md
+- Question [1]
+- Mixed Boolean Arithmetic (MBA) Transformation - MBASub
+#### Changed
+- Improve the building system from pure hand-writing Makefile to cmake - refer to [llvm-tutor](https://github.com/banach-space/llvm-tutor)
+#### Removed
+- Roadmap section in the README.md
+---
+## Question
+### [1] - 2022-10-09 - ReplaceInstWithInst and iterate BB weird behavior
+- The `llvm::ReplaceInstWithInst (BasicBlock::InstListType &BIL, BasicBlock::iterator &BI, Instruction *I)` can't used in **Range-based for loop**
+- `llvm::ReplaceInstWithInst (Instruction *From, Instruction *To)` can't used.
 ---
 ## References
 #### LLVM Passes
